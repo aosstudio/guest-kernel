@@ -1,0 +1,45 @@
+#!/bin/busybox sh
+set -e
+bb=/bin/busybox
+$bb mknod -m 0600 /dev/ttyS0 c 4 64
+exec >/dev/ttyS0 2>&1
+$bb mount -t proc proc /proc
+$bb mount -t sysfs sysfs /sys
+$bb insmod /rust_binder.ko
+$bb grep -q '^rust_binder ' /proc/modules
+[ "$($bb cat /sys/module/binder/parameters/active_impl)" = rust ]
+$bb mount -t binder binder /binderfs
+echo RUST_BINDER_ACTIVE_OK
+[ -c /binderfs/binder-control ]
+echo "BINDERFS_OK $($bb uname -r)"
+while read -r module; do
+    $bb insmod "/early-modules/$module"
+done </early-modules/load-order
+$bb grep -q '^virtio_pci ' /proc/modules
+$bb grep -q '^virtio_blk ' /proc/modules
+$bb grep -q '^virtio_rng ' /proc/modules
+[ "$($bb cat /sys/block/vda/size)" = 2048 ]
+IFS=: read -r disk_major disk_minor </sys/block/vda/dev
+$bb mknod -m 0600 /dev/vda b "$disk_major" "$disk_minor"
+[ "$($bb dd if=/dev/vda bs=22 count=1 2>/dev/null)" = AOSSTUDIO_DEVICE_PROBE ]
+echo VIRTIO_BOOT_MODULES_OK
+$bb insmod /virtio-media.ko
+$bb grep -q '^virtio_media ' /proc/modules
+echo VIRTIO_MEDIA_MODULE_OK
+$bb insmod /vkms.ko create_default_dev=1
+$bb grep -q '^vkms ' /proc/modules
+[ -d /sys/class/drm/card0 ]
+echo VKMS_DRM_DEVICE_OK
+for module in goldfish_address_space goldfish_pipe goldfish_sync; do
+    $bb insmod "/$module.ko"
+    $bb grep -q "^$module " /proc/modules
+done
+[ -d /sys/bus/pci/drivers/goldfish_address_space ]
+[ -d /sys/bus/platform/drivers/goldfish_pipe ]
+[ -d /sys/bus/platform/drivers/goldfish_sync ]
+echo GOLDFISH_DRIVER_REGISTRATION_OK
+$bb insmod /v4l2loopback.ko devices=1 video_nr=42 card_label=AOSStudioProbe
+$bb grep -q '^v4l2loopback ' /proc/modules
+[ "$($bb cat /sys/class/video4linux/video42/name)" = AOSStudioProbe ]
+echo V4L2_LOOPBACK_DEVICE_OK
+exec $bb poweroff -f
