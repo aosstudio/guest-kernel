@@ -6,7 +6,7 @@ Build on Linux x86-64 with Python 3.14 and the Ubuntu 26.04 kernel toolchain. In
 sudo apt-get update
 sudo apt-get install --yes --no-install-recommends \
   bc bindgen binutils bison build-essential busybox-static clang-21 cpio \
-  flex git kmod libdw-dev libelf-dev libssl-dev lld-21 llvm-21 pahole \
+  flex git kmod libclang1-21 libdw-dev libelf-dev libssl-dev lld-21 llvm-21 pahole \
   qemu-system-x86 rsync rust-src rustc zstd
 ```
 

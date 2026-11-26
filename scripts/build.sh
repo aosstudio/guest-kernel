@@ -12,6 +12,7 @@ export TMPDIR="$build/tmp" LC_ALL=C TZ=UTC
 export KBUILD_BUILD_USER=aosstudio KBUILD_BUILD_HOST=builder
 export KBUILD_BUILD_TIMESTAMP='2026-11-21 23:59:59 UTC'
 export KBUILD_BUILD_VERSION=1
+export LIBCLANG_PATH=/usr/lib/llvm-21/lib
 
 "$python" scripts/inputs.py --stage "$build/source"
 source="$build/source/common"
@@ -20,7 +21,8 @@ out="$build/kernel"
 patch --batch --forward --fuzz=0 -p1 -d "$source" \
     < patches/gendwarfksyms-skip-files-with-no-exports.patch
 
-kmake=(make --no-print-directory -C "$source" O="$out" ARCH=x86_64 LLVM=-21 LOCALVERSION=-aosstudio)
+kmake=(make --no-print-directory -C "$source" O="$out" ARCH=x86_64 LLVM=-21 LOCALVERSION=-aosstudio
+    RUSTC=/usr/bin/rustc BINDGEN=/usr/bin/bindgen)
 "${kmake[@]}" rustavailable
 "${kmake[@]}" gki_defconfig
 "$source/scripts/kconfig/merge_config.sh" -m -O "$out" "$out/.config" \

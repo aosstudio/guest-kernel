@@ -51,6 +51,8 @@ def git(path: Path, *args: str, check: bool = True) -> subprocess.CompletedProce
             "protocol.allow=never",
             "-c",
             "protocol.https.allow=always",
+            "-c",
+            "http.followRedirects=false",
             *args,
         ],
         env=GIT_ENV,
@@ -81,7 +83,9 @@ def fetch_source(name: str, source: Source) -> None:
     )
     if rewrite.returncode != 1:
         raise ValueError(f"Unexpected Git URL rewrite settings in {cached}")
-    probe = git(cached, "rev-parse", "--verify", f"{commit}^{{tree}}", check=False)
+    probe = git(
+        cached, "rev-parse", "--verify", "--quiet", f"{commit}^{{tree}}", check=False
+    )
     if probe.returncode:
         print(f"Fetching {name} at {commit}", flush=True)
         git(
