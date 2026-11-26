@@ -1,0 +1,54 @@
+From: Sami Tolvanen <samitolvanen@google.com>
+Subject: [PATCH] gendwarfksyms: Skip files with no exports
+
+Upstream: https://android.googlesource.com/kernel/common/+/fdf302e6bea1822a9144a0cc2e8e17527e746162
+Closes: https://lore.kernel.org/rust-for-linux/b8c1c73d-bf8b-4bf2-beb1-84ffdcd60547@163.com/
+diff --git a/scripts/gendwarfksyms/gendwarfksyms.c b/scripts/gendwarfksyms/gendwarfksyms.c
+index 08ae61e..f5203d1 100644
+--- a/scripts/gendwarfksyms/gendwarfksyms.c
++++ b/scripts/gendwarfksyms/gendwarfksyms.c
+@@ -138,7 +138,8 @@ int main(int argc, char **argv)
+ 		error("no input files?");
+ 	}
+ 
+-	symbol_read_exports(stdin);
++	if (!symbol_read_exports(stdin))
++		return 0;
+ 
+ 	if (symtypes_file) {
+ 		symfile = fopen(symtypes_file, "w");
+diff --git a/scripts/gendwarfksyms/gendwarfksyms.h b/scripts/gendwarfksyms/gendwarfksyms.h
+index d9c06d2..32cec8f 100644
+--- a/scripts/gendwarfksyms/gendwarfksyms.h
++++ b/scripts/gendwarfksyms/gendwarfksyms.h
+@@ -123,7 +123,7 @@ struct symbol {
+ typedef void (*symbol_callback_t)(struct symbol *, void *arg);
+ 
+ bool is_symbol_ptr(const char *name);
+-void symbol_read_exports(FILE *file);
++int symbol_read_exports(FILE *file);
+ void symbol_read_symtab(int fd);
+ struct symbol *symbol_get(const char *name);
+ void symbol_set_ptr(struct symbol *sym, Dwarf_Die *ptr);
+diff --git a/scripts/gendwarfksyms/symbols.c b/scripts/gendwarfksyms/symbols.c
+index 35ed594..ecddcb5 100644
+--- a/scripts/gendwarfksyms/symbols.c
++++ b/scripts/gendwarfksyms/symbols.c
+@@ -128,7 +128,7 @@ static bool is_exported(const char *name)
+ 	return for_each(name, NULL, NULL) > 0;
+ }
+ 
+-void symbol_read_exports(FILE *file)
++int symbol_read_exports(FILE *file)
+ {
+ 	struct symbol *sym;
+ 	char *line = NULL;
+@@ -159,6 +159,8 @@ void symbol_read_exports(FILE *file)
+ 
+ 	free(line);
+ 	debug("%d exported symbols", nsym);
++
++	return nsym;
+ }
+ 
+ static void get_symbol(struct symbol *sym, void *arg)
